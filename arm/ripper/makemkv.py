@@ -3,6 +3,7 @@ import sys
 import os
 import logging
 import subprocess
+import re
 import time
 import shlex
 
@@ -38,15 +39,18 @@ def makemkv(logfile, job):
     logging.info(f"Starting MakeMKV rip. Method is {cfg['RIPMETHOD']}")
     # get MakeMKV disc number
     logging.debug("Getting MakeMKV disc number")
-    cmd = f"makemkvcon -r info disc:9999  |grep {job.devpath} |grep -oP '(?<=:).*?(?=,)'"
+
+    cmd = f"makemkvcon -r info disc:9999  |grep {job.devpath}"
     try:
-        mdisc = subprocess.check_output(
+        mkvoutput = subprocess.check_output(
             cmd,
             shell=True
         ).decode("utf-8")
-        logging.info(f"MakeMKV disc number: {mdisc.strip()}")
     except subprocess.CalledProcessError as mdisc_error:
         raise MakeMkvRuntimeError(mdisc_error)
+    else:
+        mdisc = re.search(r':(\d+),', mkvoutput)[1]
+        logging.info(f"MakeMKV disc number: {mdisc}")
 
     # get filesystem in order
     rawpath = setup_rawpath(job, os.path.join(str(cfg["RAW_PATH"]), str(job.title)))
